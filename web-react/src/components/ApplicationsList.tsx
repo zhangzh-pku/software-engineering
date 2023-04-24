@@ -1,5 +1,9 @@
 import React from "react";
 import { Application } from "../types";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
+import Button from "@mui/material/Button";
 
 interface ApplicationsListProps {
   applications: Application[];
@@ -13,14 +17,16 @@ const ApplicationsList: React.FC<ApplicationsListProps> = ({
   return (
     <div>
       <h2>Applications</h2>
-      <ul>
-        {applications.map((app) => (
-          <li key={app.id}>
-            <a href={`/applications/${app.id}`}>{app.name}</a>
-          </li>
+      <List>
+        {applications.map((application) => (
+          <ListItem button key={application.id}>
+            <ListItemText primary={application.name} />
+          </ListItem>
         ))}
-      </ul>
-      <button onClick={onCreateApplication}>Create Application</button>
+      </List>
+      <Button variant="contained" color="primary" onClick={onCreateApplication}>
+        Create Application
+      </Button>
     </div>
   );
 };
