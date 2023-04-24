@@ -1,24 +1,58 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from "react";
+import "./App.css";
+import { Application, Output } from "./types";
+import ApplicationsList from "./components/ApplicationsList";
+import CreateApplication from "./components/CreateApplication";
+import ApplicationDetails from "./components/ApplicationDetails";
 
 function App() {
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [selectedApplication, setSelectedApplication] =
+    useState<Application | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  const handleCreateApplication = () => {
+    setShowCreateForm(true);
+  };
+
+  const handleSubmitApplication = (script: string, doi: string) => {
+    const newApplication: Application = {
+      id: applications.length + 1,
+      name: `Application ${applications.length + 1}`,
+      script,
+      doi,
+    };
+    setApplications([...applications, newApplication]);
+    setShowCreateForm(false);
+  };
+
+  const handleSelectApplication = (id: number) => {
+    const app = applications.find((application) => application.id === id);
+    setSelectedApplication(app ?? null);
+  };
+
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+        <h1>My Application</h1>
       </header>
+      <main>
+        {!selectedApplication && !showCreateForm && (
+          <ApplicationsList
+            applications={applications}
+            onCreateApplication={handleCreateApplication}
+          />
+        )}
+        {!selectedApplication && showCreateForm && (
+          <CreateApplication onSubmit={handleSubmitApplication} />
+        )}
+        {selectedApplication && (
+          <ApplicationDetails
+            application={selectedApplication}
+            onBack={() => setSelectedApplication(null)}
+          />
+        )}
+      </main>
     </div>
   );
 }
