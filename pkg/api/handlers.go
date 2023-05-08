@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -23,6 +24,7 @@ func runHandler(c *gin.Context) {
 	}
 
 	if err := c.BindJSON(&requestBody); err != nil {
+		fmt.Println(err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -31,6 +33,7 @@ func runHandler(c *gin.Context) {
 
 	taskID, err := task.RunScriptsInDocker(scripts, dockerImage)
 	if err != nil {
+		fmt.Println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
