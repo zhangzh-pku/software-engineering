@@ -24,9 +24,9 @@ const ApplicationsList: React.FC<ApplicationsListProps> = ({
           </ListItem>
         ))}
       </List>
-      <Button variant="contained" color="primary" onClick={onCreateApplication}>
+      {/* <Button variant="contained" color="primary" onClick={onCreateApplication}>
         Create Application
-      </Button>
+       </Button>*/}
     </div>
   );
 };
