@@ -20,8 +20,19 @@ import NotificationsIcon from '@mui/icons-material/Notifications';
 import AccountInformation from './AccountInformation';
 import CreateApplication from "./CreateApplication";
 import { Application } from "../types";
-import { useState } from "react";
+import { useState, useContext } from "react";
 import ApplicationsList from "./ApplicationsList";
+import MainListItems from './listItems';
+import DisplayContent from "./Display";
+import CreateContent from "./Create";
+import { AppContext } from './AppContext';
+import Menu from '@mui/material/Menu'
+import AccountCircle from '@mui/icons-material/AccountCircle';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormGroup from '@mui/material/FormGroup';
+import MenuItem from '@mui/material/MenuItem';
+
 
 function Copyright(props: any) {
   return (
@@ -88,30 +99,51 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 
 const mdTheme = createTheme();
 
+
+
 function DashboardContent() {
+  
+  {/* For Drawer*/ }
   const [open, setOpen] = React.useState(true);
+
   const toggleDrawer = () => {
     setOpen(!open);
   };
-  
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [selectedApplication, setSelectedApplication] =
-    useState<Application | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const handleCreateApplication = () => {
-    setShowCreateForm(true);
-  };
+  {/* For Application */}
+  const {uploadedApplications, addUploadedApplication} = useContext(AppContext);
+
+  {/* For View*/ }
+  const [view, setView] = React.useState('Display');  
+
+  function onIconCLick(newView : string) : void{
+      console.log("change view to a new one");
+      setView(newView);
+  }
   
-  const handleSubmitApplication = (script: string, doi: string) => {
-    const newApplication: Application = {
-      id: applications.length + 1,
-      name: `Application ${applications.length + 1}`,
-      script,
-      doi,
-    };
-    setApplications([...applications, newApplication]);
-    setShowCreateForm(false);
+  const contentView = () => {
+    switch(view){
+      case 'Display':
+        return <DisplayContent applications = {uploadedApplications} />
+      
+      case 'Create':
+        return <CreateContent applications = {uploadedApplications} setApplications={addUploadedApplication} />
+    }
+  }
+  {/*for account */}
+  const [auth, setAuth] = React.useState(true);
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setAuth(event.target.checked);
+  };
+
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
   };
 
   return (
@@ -145,6 +177,37 @@ function DashboardContent() {
             >
               Dashboard
             </Typography>
+           {/*<AccountInformation />*/}
+            <div>
+              <IconButton
+                size="large"
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                onClick={handleMenu}
+                color="inherit"
+              >
+                <AccountCircle />
+              </IconButton>
+              <Menu
+                id="menu-appbar"
+                anchorEl={anchorEl}
+                anchorOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+                keepMounted
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+                open={Boolean(anchorEl)}
+                onClose={handleClose}
+              >
+                <MenuItem onClick={handleClose}>Profile</MenuItem>
+                <MenuItem onClick={handleClose}>My account</MenuItem>
+              </Menu>
+            </div>
             <IconButton color="inherit">
               <Badge badgeContent={4} color="secondary">
                 <NotificationsIcon />
@@ -165,6 +228,7 @@ function DashboardContent() {
               <ChevronLeftIcon />
             </IconButton>
           </Toolbar>
+          <MainListItems handleClick = {onIconCLick}/>
           <Divider />
           <List component="nav">
             <Divider sx={{ my: 1 }} />
@@ -184,43 +248,7 @@ function DashboardContent() {
         >
           <Toolbar />
           <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Grid container spacing={3}>
-              {/* Create Application */}
-              <Grid item xs={12} md={8} lg={9}>
-                <Paper
-                  sx={{
-                    p: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: 320,
-                  }}
-                >
-                	<CreateApplication onSubmit = {handleSubmitApplication}/>
-                </Paper>
-              </Grid>
-              {/* Account Information */}
-              <Grid item xs={12} md={4} lg={3}>
-                <Paper
-                  sx={{
-                    p: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: 320,
-                  }}
-                >
-                	<AccountInformation />
-                </Paper>
-              </Grid>
-              {/* ApplicationList */}
-              <Grid item xs={12}>
-                <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
-                	<ApplicationsList
-       			     applications={applications}
-        		    onCreateApplication={handleCreateApplication}
-        		  />
-                </Paper>
-              </Grid>
-            </Grid>
+            {contentView()}
             <Copyright sx={{ pt: 4 }} />
           </Container>
         </Box>
