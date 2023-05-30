@@ -8,14 +8,51 @@ import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import TextField from "@mui/material/TextField";
-import { useState } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 
 const steps = ['Upload your dataset', 'Run', 'See the output'];
+
+interface FileDisplayProps {
+  path: string
+}
+
+{/*This component is used to display log content dynamically 
+  Now the path is /public/try.txt
+*/ }
+function FileDisplay({ path }: FileDisplayProps) {
+  const [fileContents, setFileContents] = useState('');
+
+  const fetchFileContents = async () => {
+    try {
+      const response = await fetch(path);
+      const content = await response.text();
+      setFileContents(content);
+    } catch (error) {
+      console.error('Error loading file:', error);
+    }
+  };
+
+  const longPollingFetch = () => {
+    fetchFileContents(); // 发起获取文件内容的请求
+
+    setTimeout(longPollingFetch, 1000); // 1秒后再次进行长轮询
+  };
+
+  useEffect(() => {
+    longPollingFetch(); // 开始进行长轮询
+  }, [path]);
+
+  return (
+    <div>
+      <pre>{fileContents}</pre>
+    </div>
+  );
+}
 
 export default function HorizontalLinearStepper() {
   const [activeStep, setActiveStep] = React.useState(0);
   const [skipped, setSkipped] = React.useState(new Set<number>());
-  
+
 
   const isStepOptional = (step: number) => {
     return step === 5;
@@ -62,8 +99,8 @@ export default function HorizontalLinearStepper() {
   {/*For step 0 */ }
   const [zippath, setZippath] = useState("")
 
-  {/*For step 1 */}
-  const [taskstatus, setTaskstatus] = React.useState(0);{/* 0 for waiting, 1 for running, 2 for exited, 3 for dead*/}
+  {/*For step 1 */ }
+  const [taskstatus, setTaskstatus] = React.useState(0); {/* 0 for waiting, 1 for running, 2 for exited, 3 for dead*/ }
 
   const handleRun = () => {
     setTaskstatus(1);
@@ -106,7 +143,7 @@ export default function HorizontalLinearStepper() {
               p: 2,
               display: 'flex',
               flexDirection: 'column',
-              height: 400,
+              height: 200,
             }}
           >
             <div>
@@ -117,11 +154,21 @@ export default function HorizontalLinearStepper() {
                 color="secondary"
                 disabled={taskstatus !== 0}
                 sx={{ mr: 1 }}
-                onClick = {handleRun}
+                onClick={handleRun}
               >
                 Run
               </Button>
             </div>
+          </Paper>
+          <Paper
+            sx={{
+              p: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              height: 200,
+            }}
+          >
+            <FileDisplay path={"../try.txt"} />
           </Paper>
         </Grid>
       </Grid>)
