@@ -3,20 +3,21 @@ import { Application } from "../types";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
+import ApplicationBlock from "./ApplicationBlock"
 import Button from "@mui/material/Button";
+import Grid from '@mui/material/Grid';
 
 interface ApplicationsListProps {
   applications: Application[];
-  onCreateApplication: () => void;
 }
 
 const ApplicationsList: React.FC<ApplicationsListProps> = ({
   applications,
-  onCreateApplication,
 }) => {
   return (
     <div>
-      <h2>Applications</h2>
+      <h1>Reproductions</h1>
+      {/*
       <List>
         {applications.map((application) => (
           <ListItem button key={application.id}>
@@ -24,9 +25,15 @@ const ApplicationsList: React.FC<ApplicationsListProps> = ({
           </ListItem>
         ))}
       </List>
-      {/* <Button variant="contained" color="primary" onClick={onCreateApplication}>
-        Create Application
-       </Button>*/}
+      */}
+      
+      {
+      <Grid container spacing = {3}>
+        {applications.map((application) => (
+          <ApplicationBlock application = {application} />
+        ))}
+      </Grid>
+      } 
     </div>
   );
 };
