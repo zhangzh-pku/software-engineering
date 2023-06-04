@@ -1,0 +1,474 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Pink", "description": "Pink", "version": "latest" },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {}
+  },
+  "paths": {
+    "/api/user/register": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "email": { "format": "email", "type": "string" },
+                  "password": { "type": "string" }
+                },
+                "required": ["username", "email", "password"]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "_id": { "type": "string" } },
+                  "required": ["_id"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/edit": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "email": { "format": "email", "type": "string" },
+                  "password": { "type": "string" },
+                  "hash": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "_id": { "type": "string" } },
+                  "required": ["_id"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/login": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "password": { "type": "string" }
+                },
+                "required": ["username", "password"]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "token": { "type": "string" } },
+                  "required": ["token"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/authorize": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "response_type": { "type": "string" },
+                  "client_id": { "type": "string" },
+                  "redirect_uri": { "type": "string" },
+                  "scope": { "type": "string" },
+                  "state": { "type": "string" },
+                  "nonce": { "type": "string" }
+                },
+                "required": [
+                  "response_type",
+                  "client_id",
+                  "redirect_uri",
+                  "scope",
+                  "state",
+                  "nonce"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": { "200": { "description": "Default Response" } }
+      }
+    },
+    "/api/user/profile": {
+      "get": { "responses": { "200": { "description": "Default Response" } } }
+    },
+    "/api/pin/create": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string" },
+                  "metadata": { "type": "object", "additionalProperties": {} }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": { "schema": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/pin/list": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "_id": { "type": "string" },
+                      "type": { "type": "string" },
+                      "owner": { "type": "string" },
+                      "metadata": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": ["_id", "type", "owner", "metadata"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pin/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "_id": { "type": "string" },
+                    "type": { "type": "string" },
+                    "owner": { "type": "string" },
+                    "metadata": { "type": "object", "additionalProperties": {} }
+                  },
+                  "required": ["_id", "type", "owner", "metadata"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "metadata": { "type": "object", "additionalProperties": {} }
+                },
+                "required": ["metadata"]
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": { "schema": { "type": "number" } }
+            }
+          }
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": { "schema": { "type": "number" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/link/create": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": { "type": "string" },
+                  "to": { "type": "string" },
+                  "type": { "type": "string" },
+                  "metadata": { "type": "object", "additionalProperties": {} }
+                },
+                "required": ["from", "to", "type", "metadata"]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "_id": { "type": "string" } },
+                  "required": ["_id"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/link/list": {
+      "get": {
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": { "type": "string" },
+            "in": "query",
+            "name": "to",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "_id": { "type": "string" },
+                      "from": { "type": "string" },
+                      "to": { "type": "string" },
+                      "type": { "type": "string" },
+                      "metadata": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": ["_id", "from", "to", "type", "metadata"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/link/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "_id": { "type": "string" },
+                    "from": { "type": "string" },
+                    "to": { "type": "string" },
+                    "type": { "type": "string" },
+                    "metadata": { "type": "object", "additionalProperties": {} }
+                  },
+                  "required": ["_id", "from", "to", "type", "metadata"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "metadata": { "type": "object", "additionalProperties": {} }
+                },
+                "required": ["metadata"]
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": { "schema": { "type": "number" } }
+            }
+          }
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": { "schema": { "type": "number" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/query/stats": {
+      "get": { "responses": { "200": { "description": "Default Response" } } }
+    },
+    "/api/query/getLinkOf": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": { "type": "string" },
+                  "to": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Default Response" } }
+      }
+    },
+    "/api/query/getAllLinks": {
+      "post": { "responses": { "200": { "description": "Default Response" } } }
+    },
+    "/api/query/getAllPins": {
+      "post": { "responses": { "200": { "description": "Default Response" } } }
+    }
+  },
+  "security": [{ "bearerAuth": [] }]
+}

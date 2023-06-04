@@ -2,13 +2,11 @@ package task
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -18,16 +16,63 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/google/uuid"
+	"github.com/zhangzh-pku/software-engineering/pkg/api/entity"
 )
 
-func GetScriptsAndDockerImage(doip string) ([]string, string) {
-	if doip == "abacus" {
-		return []string{"mpirun -n 8 abacus"}, "registry.dp.tech/dptech/abacus:3.1.0"
+func GetScriptsAndDockerImage(doid string) (string, string, error) {
+	manager := entity.GetManagerInstance()
+	pin, err := manager.GetPin(doid)
+	if err != nil {
+		return "", "", err
 	}
-	return []string{"script1.sh", "script2.sh"}, "your-docker-image"
+	if pin.Type != entity.ReproductionPinType {
+		return "", "", fmt.Errorf("got unexcepted pin type %s", pin.Type)
+	}
+	links, err := manager.GetAllLinks(doid)
+	if err != nil {
+		return "", "", err
+	}
+	var scripts string
+	var image string
+	fmt.Printf("got len links %d", len(links))
+	for i := range links {
+		pin, err := manager.GetPin(links[i].To)
+		if err != nil {
+			return "", "", err
+		}
+		switch pin.Type {
+		case entity.DockerPinType:
+			if _image, ok := pin.Metadata[entity.DockerKey]; !ok {
+				return "", "", fmt.Errorf("image pin format error. no image found in pin.metadata")
+			} else {
+				if image, ok = _image.(string); !ok {
+					return "", "", fmt.Errorf("image pin format error. cant convert image to string")
+				}
+			}
+
+		case entity.ScriptPinType:
+			if _scripts, ok := pin.Metadata[entity.ScriptKey]; !ok {
+				return "", "", fmt.Errorf("script pin format error. no scripts found in pin.metadata")
+			} else {
+				if scripts, ok = _scripts.(string); !ok {
+					fmt.Println(_scripts)
+					return "", "", fmt.Errorf("script pin format error. can't convert script to string")
+				}
+			}
+		default:
+			fmt.Printf("got type %s", pin.Type)
+		}
+	}
+	if len(scripts) == 0 {
+		return "", "", fmt.Errorf("script not found")
+	}
+	if image == "" {
+		return "", "", fmt.Errorf("image not found")
+	}
+	return scripts, image, nil
 }
 
-func RunScriptsInDocker(scripts []string, dockerImage string) (string, error) {
+func RunScriptsInDocker(scripts string, dockerImage string) (string, error) {
 	// 创建Docker客户端
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -39,14 +84,12 @@ func RunScriptsInDocker(scripts []string, dockerImage string) (string, error) {
 		return "", err
 	}
 
-	// 调用API获取实际运行的脚本
-	executableScripts, err := fetchExecutableScripts(scripts)
 	if err != nil {
 		return "", err
 	}
 
 	// 在Docker映像中运行脚本，并返回任务ID
-	taskID, err := executeScripts(cli, executableScripts, dockerImage)
+	taskID, err := executeScripts(cli, scripts, dockerImage)
 
 	return taskID, err
 }
@@ -85,27 +128,10 @@ func checkAndPullImage(cli *client.Client, imageName string) error {
 	return nil
 }
 
-func fetchExecutableScripts(scripts []string) ([]string, error) {
-	// 在此处调用API以获取可执行脚本
-	// 模拟从API获取可执行脚本的过程
-	executableScripts := []string{}
-	for _, script := range scripts {
-		if strings.Contains(script, "abacus") {
-			executableScripts = append(executableScripts, script)
-		}
-	}
-
-	if len(executableScripts) == 0 {
-		return nil, errors.New("no executable scripts found")
-	}
-
-	return executableScripts, nil
-}
-
 func generateTaskID() string {
 	return uuid.New().String()
 }
-func executeScripts(cli *client.Client, scripts []string, dockerImage string) (string, error) {
+func executeScripts(cli *client.Client, scripts string, dockerImage string) (string, error) {
 	taskID := generateTaskID()
 
 	// 创建容器
@@ -166,73 +192,70 @@ func executeScripts(cli *client.Client, scripts []string, dockerImage string) (s
 
 		time.Sleep(1 * time.Second)
 	}
-
+	script := scripts
 	// 在容器中顺序执行脚本
-	for _, script := range scripts {
-		execConfig := &types.ExecConfig{
-			AttachStdout: true,
-			AttachStderr: true,
-			Cmd:          []string{"bash", "-c", "cd " + workdir + " && " + script},
-		}
+	execConfig := &types.ExecConfig{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          []string{"bash", "-c", "cd " + workdir + " && " + script},
+	}
 
-		execID, err := cli.ContainerExecCreate(context.Background(), resp.ID, *execConfig)
-		if err != nil {
-			log.Fatalf("Failed to create exec configuration: %v", err)
-		}
+	execID, err := cli.ContainerExecCreate(context.Background(), resp.ID, *execConfig)
+	if err != nil {
+		log.Fatalf("Failed to create exec configuration: %v", err)
+	}
 
-		response, err := cli.ContainerExecAttach(context.Background(), execID.ID, types.ExecStartCheck{})
-		if err != nil {
-			log.Fatalf("Failed to attach to exec: %v", err)
-		}
-		defer response.Close()
+	response, err := cli.ContainerExecAttach(context.Background(), execID.ID, types.ExecStartCheck{})
+	if err != nil {
+		log.Fatalf("Failed to attach to exec: %v", err)
+	}
+	defer response.Close()
 
-		// 输出脚本执行结果
-		stdcopy.StdCopy(os.Stdout, os.Stderr, response.Reader)
+	// 输出脚本执行结果
+	stdcopy.StdCopy(os.Stdout, os.Stderr, response.Reader)
 
-		execInspect, err := cli.ContainerExecInspect(context.Background(), execID.ID)
-		if err != nil {
-			log.Fatalf("Failed to inspect exec: %v", err)
-		}
+	execInspect, err := cli.ContainerExecInspect(context.Background(), execID.ID)
+	if err != nil {
+		log.Fatalf("Failed to inspect exec: %v", err)
+	}
 
-		mvCmd := fmt.Sprintf("mv %s/* %s/", workdir, outDirIn)
-		execConfigMv := &types.ExecConfig{
-			AttachStdout: true,
-			AttachStderr: true,
-			Cmd:          []string{"bash", "-c", mvCmd},
-		}
+	mvCmd := fmt.Sprintf("mv %s/* %s/", workdir, outDirIn)
+	execConfigMv := &types.ExecConfig{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          []string{"bash", "-c", mvCmd},
+	}
 
-		execIDMv, err := cli.ContainerExecCreate(context.Background(), resp.ID, *execConfigMv)
-		if err != nil {
-			log.Fatalf("Failed to create exec configuration for mv command: %v", err)
-		}
+	execIDMv, err := cli.ContainerExecCreate(context.Background(), resp.ID, *execConfigMv)
+	if err != nil {
+		log.Fatalf("Failed to create exec configuration for mv command: %v", err)
+	}
 
-		responseMv, err := cli.ContainerExecAttach(context.Background(), execIDMv.ID, types.ExecStartCheck{})
-		if err != nil {
-			log.Fatalf("Failed to attach to exec for mv command: %v", err)
-		}
-		defer responseMv.Close()
+	responseMv, err := cli.ContainerExecAttach(context.Background(), execIDMv.ID, types.ExecStartCheck{})
+	if err != nil {
+		log.Fatalf("Failed to attach to exec for mv command: %v", err)
+	}
+	defer responseMv.Close()
 
-		// 输出mv命令执行结果
-		stdcopy.StdCopy(os.Stdout, os.Stderr, responseMv.Reader)
+	// 输出mv命令执行结果
+	stdcopy.StdCopy(os.Stdout, os.Stderr, responseMv.Reader)
 
-		execInspectMv, err := cli.ContainerExecInspect(context.Background(), execIDMv.ID)
-		if err != nil {
-			log.Fatalf("Failed to inspect exec for mv command: %v", err)
-		}
+	execInspectMv, err := cli.ContainerExecInspect(context.Background(), execIDMv.ID)
+	if err != nil {
+		log.Fatalf("Failed to inspect exec for mv command: %v", err)
+	}
 
-		if execInspectMv.ExitCode != 0 {
-			log.Printf("mv command exited with code %d\n", execInspectMv.ExitCode)
-			// 报告错误，根据实际需求自定义错误信息
-			err = fmt.Errorf("mv command execution failed with exit code %d", execInspectMv.ExitCode)
-			return "", err
-		}
-
-		if execInspect.ExitCode != 0 {
-			log.Printf("Script %s exited with code %d\n", script, execInspect.ExitCode)
-			// 报告错误，根据实际需求自定义错误信息
-			err = fmt.Errorf("script %s execution failed with exit code %d", script, execInspect.ExitCode)
-			return "", err
-		}
+	if execInspectMv.ExitCode != 0 {
+		log.Printf("mv command exited with code %d\n", execInspectMv.ExitCode)
+		// 报告错误，根据实际需求自定义错误信息
+		err = fmt.Errorf("mv command execution failed with exit code %d", execInspectMv.ExitCode)
+		return "", err
+	}
+	if execInspect.ExitCode != 0 {
+		log.Printf("Script %s exited with code %d\n", script, execInspect.ExitCode)
+		// 报告错误，根据实际需求自定义错误信息
+		err = fmt.Errorf("script %s execution failed with exit code %d", script, execInspect.ExitCode)
+		return "", err
 	}
 
 	// 停止并删除容器
