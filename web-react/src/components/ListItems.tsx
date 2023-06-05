@@ -4,7 +4,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import ListSubheader from '@mui/material/ListSubheader';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import UploadIcon from '@mui/icons-material/Upload';
 import PeopleIcon from '@mui/icons-material/People';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import LayersIcon from '@mui/icons-material/Layers';
@@ -26,15 +26,15 @@ export default function MainListItems(param : listProps) {
           </ListItemButton>
           <ListItemButton onClick = {() => param.handleClick('Create')}>
             <ListItemIcon>
-              <ShoppingCartIcon />
+              <UploadIcon />
             </ListItemIcon>
             <ListItemText primary="Create" />
           </ListItemButton>
-          <ListItemButton>
+          <ListItemButton onClick = {() => param.handleClick('Account')}>
             <ListItemIcon>
               <PeopleIcon />
             </ListItemIcon>
-            <ListItemText primary="Customers" />
+            <ListItemText primary="Account" />
           </ListItemButton>
           <ListItemButton>
             <ListItemIcon>
