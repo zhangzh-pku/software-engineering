@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zhangzh-pku/software-engineering/pkg/api/entity"
+	"github.com/zhangzh-pku/software-engineering/pkg/file"
 	"github.com/zhangzh-pku/software-engineering/pkg/task"
 )
 
@@ -36,6 +37,14 @@ func runHandler(c *gin.Context) {
 
 	if err != nil {
 		fmt.Println(err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = file.CopyFile(dockerImage, filepath.Join("/data/zzh", dockerImage))
+
+	if err != nil {
+		fmt.Println("Failed to copy files.")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -106,6 +115,7 @@ func generateReproduction(c *gin.Context) {
 		DockerImage     string `json:"docker_image"`
 		RunScript       string `json:"run_script"`
 		DissertationDOI string `json:"dissertation_doi"`
+		Path            string `json:"path"`
 	}
 	if err := c.BindJSON(&requestBody); err != nil {
 		fmt.Println(err.Error())
@@ -113,7 +123,7 @@ func generateReproduction(c *gin.Context) {
 		return
 	}
 	manager := entity.GetManagerInstance()
-	err := manager.GenerateReproduction(requestBody.DockerImage, requestBody.RunScript, requestBody.DissertationDOI)
+	err := manager.GenerateReproduction(requestBody.DockerImage, requestBody.RunScript, requestBody.DissertationDOI, requestBody.Path)
 	if err != nil {
 		fmt.Println(err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

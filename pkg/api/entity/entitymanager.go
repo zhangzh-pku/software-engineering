@@ -13,13 +13,16 @@ import (
 )
 
 const (
-	DockerPinType       = "docker_image"
-	ScriptPinType       = "run_script"
-	DissertationPinType = "dissertation_doi"
-	ReproductionPinType = "reproduction"
-	DockerKey           = "image"
-	ScriptKey           = "script"
-	DissertationKey     = "disseration"
+	DockerPinType        = "docker_image"
+	ScriptPinType        = "run_script"
+	DissertationPinType  = "dissertation_doi"
+	ReproductionPinType  = "reproduction"
+	DockerKey            = "image"
+	ScriptKey            = "script"
+	DissertationKey      = "disseration"
+	Path                 = "path"
+	ReproductionLinkType = "reproduction_link"
+	OtherLinkType        = "ref_link"
 )
 
 // Manager manages Pins and Links
@@ -205,7 +208,7 @@ func (m *DoManager) GetAllLinks(pinId string) ([]*Link, error) {
 	return links, nil
 }
 
-func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, dissertationDOI string) error {
+func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, dissertationDOI string, path string) error {
 	var DockerImagePin, RunScriptPin, DissertationDOIPin Pin
 	DockerImagePin.Type = DockerPinType
 	RunScriptPin.Type = ScriptPinType
@@ -214,6 +217,7 @@ func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, d
 	RunScriptPin.Metadata = make(map[string]interface{})
 	DockerImagePin.Metadata = make(map[string]interface{})
 	DockerImagePin.Metadata[DockerKey] = dockerImage
+	DockerImagePin.Metadata[Path] = path
 	RunScriptPin.Metadata[ScriptKey] = runScript
 	DissertationDOIPin.Metadata[DissertationKey] = dissertationDOI
 	dockerPinID, err := DockerImagePin.Create()
@@ -238,16 +242,19 @@ func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, d
 	link1 := &Link{
 		From: dissertationDOIID,
 		To:   reproductionID,
+		Type: ReproductionLinkType,
 	}
 	link1.Metadata = make(map[string]interface{})
 	link2 := &Link{
 		From: reproductionID,
 		To:   runScriptID,
+		Type: OtherLinkType,
 	}
 	link2.Metadata = make(map[string]interface{})
 	link3 := &Link{
 		From: reproductionID,
 		To:   dockerPinID,
+		Type: OtherLinkType,
 	}
 	link3.Metadata = make(map[string]interface{})
 	_, err = m.AddLink(link1)
