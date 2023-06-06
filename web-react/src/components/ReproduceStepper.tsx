@@ -9,12 +9,41 @@ import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import TextField from "@mui/material/TextField";
 import { useState, ChangeEvent, useEffect } from "react";
+import Linklist from "./Linklist"
+import InteractiveList from './FileList';
 
-const steps = ['Upload your dataset', 'Run', 'See the output'];
+const steps = ['Upload your dataset', 'Run', 'Download the output'];
+{/* Attention that here we must use addresses with http://! 
+Otherwise it will go to localhost:3000/path instead of it directly!*/}
+const links = ["http://www.baidu.com", "http://www.taobao.com"];
 
 interface FileDisplayProps {
   path: string
 }
+
+const FileInput = () => {
+  const [fileContent, setFileContent] = useState('');
+
+  const handleFileRead = (e: any) => {
+    const content = e.target.result;
+    setFileContent(content);
+  };
+
+  const handleFileChosen = (file: any) => {
+    const fileReader = new FileReader();
+    fileReader.onloadend = handleFileRead;
+    fileReader.readAsText(file[0]);
+  };
+
+  return (
+    <div>
+      <input type="file" onChange={(e) => handleFileChosen(e.target.files)} />
+      <p>{fileContent}</p>
+    </div>
+  );
+};
+
+
 
 {/*This component is used to display log content dynamically 
   Now the path is /public/try.txt
@@ -64,6 +93,7 @@ export default function HorizontalLinearStepper() {
 
   const handleNext = () => {
     let newSkipped = skipped;
+    {console.log(process.cwd())}
     if (isStepSkipped(activeStep)) {
       newSkipped = new Set(newSkipped.values());
       newSkipped.delete(activeStep);
@@ -100,10 +130,10 @@ export default function HorizontalLinearStepper() {
   const [zippath, setZippath] = useState("")
 
   {/*For step 1 */ }
-  const [taskstatus, setTaskstatus] = React.useState(0); {/* 0 for waiting, 1 for running, 2 for exited, 3 for dead*/ }
+  const [taskstatus, setTaskstatus] = React.useState("waiting"); {/* 0 for waiting, 1 for running, 2 for exited, 3 for dead*/ }
 
   const handleRun = () => {
-    setTaskstatus(1);
+    setTaskstatus("running");
   };
 
 
@@ -130,6 +160,8 @@ export default function HorizontalLinearStepper() {
                   fullWidth
                   margin="normal"
                 />
+                <h3>Maybe you will be using following datasets:</h3>
+                <Linklist links={links} />
               </div>
             </Paper>
           </Grid>
@@ -152,7 +184,7 @@ export default function HorizontalLinearStepper() {
               <Button
                 variant="contained"
                 color="secondary"
-                disabled={taskstatus !== 0}
+                disabled={taskstatus !== "waiting"}
                 sx={{ mr: 1 }}
                 onClick={handleRun}
               >
@@ -173,6 +205,24 @@ export default function HorizontalLinearStepper() {
         </Grid>
       </Grid>)
 
+      case 2: return(<Grid container spacing={3} justifyContent="center">
+      {/* Run the image */}
+      <Grid item xs={12} md={8} lg={9}>
+        <Paper
+          sx={{
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            height: 400,
+            maxHeight: "100%",
+            overflow:"auto"
+          }}
+        >
+          {/*<FileInput />*/}
+          <InteractiveList/>
+        </Paper>
+      </Grid>
+    </Grid>)
     }
   }
 
@@ -227,7 +277,9 @@ export default function HorizontalLinearStepper() {
                 Skip
               </Button>
             )}
-            <Button onClick={handleNext}>
+            {/*|| (activeStep === 1 && taskstatus !== "finish")
+              Add this to the condition of disabled*/}
+            <Button onClick={handleNext} disabled = {(activeStep === 0 && zippath === '') }>
               {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
             </Button>
           </Box>

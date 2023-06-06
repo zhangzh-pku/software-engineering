@@ -22,7 +22,7 @@ import CreateApplication from "./CreateApplication";
 import { Application } from "../types";
 import { useState, useContext } from "react";
 import ApplicationsList from "./ApplicationsList";
-import MainListItems from './listItems';
+import MainListItems from './ListItems';
 import DisplayContent from "./Display";
 import CreateContent from "./Create";
 import { AppContext } from './AppContext';
@@ -38,7 +38,7 @@ function Copyright(props: any) {
   return (
     <Typography variant="body2" color="text.secondary" align="center" {...props}>
       {'Copyright © '}
-      <Link color="inherit" href="https://mui.com/">
+      <Link color="inherit" href="https://github.com/zhangzh-pku/software-engineering">
         PKU Software-Engineering Honor Track Group 4
       </Link>{' '}
       {new Date().getFullYear()}
@@ -102,7 +102,7 @@ const mdTheme = createTheme();
 
 
 function DashboardContent() {
-  
+
   {/* For Drawer*/ }
   const [open, setOpen] = React.useState(true);
 
@@ -110,27 +110,30 @@ function DashboardContent() {
     setOpen(!open);
   };
 
-  {/* For Application */}
-  const {uploadedApplications, addUploadedApplication} = useContext(AppContext);
+  {/* For Application */ }
+  const { uploadedApplications, addUploadedApplication } = useContext(AppContext);
 
   {/* For View*/ }
-  const [view, setView] = React.useState('Display');  
+  const [view, setView] = React.useState('Display');
 
-  function onIconCLick(newView : string) : void{
-      console.log("change view to a new one");
-      setView(newView);
+  function onIconCLick(newView: string): void {
+    console.log("change view to a new one");
+    setView(newView);
   }
-  
+
   const contentView = () => {
-    switch(view){
+    switch (view) {
       case 'Display':
-        return <DisplayContent applications = {uploadedApplications} />
-      
+        return <DisplayContent applications={uploadedApplications} />
+
       case 'Create':
-        return <CreateContent applications = {uploadedApplications} setApplications={addUploadedApplication} />
-    }
+        return <CreateContent applications={uploadedApplications} setApplications={addUploadedApplication} changeView={() => setView("Display")}/>
+    
+      case 'Account':
+        return <AccountInformation/>  
+      }
   }
-  {/*for account */}
+  {/*for account */ }
   const [auth, setAuth] = React.useState(true);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
@@ -177,7 +180,7 @@ function DashboardContent() {
             >
               Dashboard
             </Typography>
-           {/*<AccountInformation />*/}
+            {/*<AccountInformation />*/}
             <div>
               <IconButton
                 size="large"
@@ -228,7 +231,7 @@ function DashboardContent() {
               <ChevronLeftIcon />
             </IconButton>
           </Toolbar>
-          <MainListItems handleClick = {onIconCLick}/>
+          <MainListItems handleClick={onIconCLick} />
           <Divider />
           <List component="nav">
             <Divider sx={{ my: 1 }} />

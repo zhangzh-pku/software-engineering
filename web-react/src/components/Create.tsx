@@ -23,15 +23,16 @@ import { Application } from "../types";
 import { useState } from "react";
 import ApplicationsList from "./ApplicationsList";
 
-interface createProps{
-    applications : Application[]
-    setApplications : any
+interface createProps {
+  applications: Application[]
+  setApplications: any
+  changeView: any
 }
 
-export default function CreateContent(param : createProps){
-    {/*const [applications, setApplications] = useState<Application[]>([]);*/}
-  
-    const handleSubmitApplication = (script: string, doi: string) => {
+export default function CreateContent(param: createProps) {
+  {/*const [applications, setApplications] = useState<Application[]>([]);*/ }
+
+  const handleSubmitApplication = (script: string, doi: string) => {
     const newApplication: Application = {
       id: param.applications.length + 1,
       name: `Reproduction ${param.applications.length + 1}`,
@@ -39,37 +40,24 @@ export default function CreateContent(param : createProps){
       doi,
     };
     param.setApplications(newApplication);
+    param.changeView("Display")
   };
 
   return (
-    <Grid container spacing={3}>
-              {/* Create Application */}
-              <Grid item xs={12} md={8} lg={9}>
-                <Paper
-                  sx={{
-                    p: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: 400,
-                  }}
-                >
-                	<CreateApplication onSubmit = {handleSubmitApplication}/>
-                </Paper>
-              </Grid>
-            </Grid>
+    <Grid container spacing={3} justifyContent="center">
+      {/* Create Application */}
+      <Grid item xs={12} md={8} lg={9}>
+        <Paper
+          sx={{
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            height: 480,
+          }}
+        >
+          <CreateApplication onSubmit={handleSubmitApplication} />
+        </Paper>
+      </Grid>
+    </Grid>
   )
 }
-
-{/*{ Account Information }
-<Grid item xs={12} md={4} lg={3}>
-<Paper
-  sx={{
-    p: 2,
-    display: 'flex',
-    flexDirection: 'column',
-    height: 320,
-  }}
->
-    <AccountInformation />
-</Paper>
-</Grid> */}
