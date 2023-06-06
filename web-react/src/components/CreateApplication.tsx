@@ -69,8 +69,7 @@ const CreateApplication: React.FC<CreateApplicationProps> = ({ onSubmit }) => {
         fullWidth
         margin="normal"
       />
-
-      <Button variant="contained" color="primary" onClick={handleSubmit}>
+      <Button variant="contained" color="primary" onClick={handleSubmit} disabled={dockerimage === "" || doi === "" || reproduction === "" || script === ""}>
         Submit
       </Button>
     </div>

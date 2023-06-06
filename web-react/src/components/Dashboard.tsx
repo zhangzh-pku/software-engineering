@@ -11,26 +11,18 @@ import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import Badge from '@mui/material/Badge';
 import Container from '@mui/material/Container';
-import Grid from '@mui/material/Grid';
-import Paper from '@mui/material/Paper';
 import Link from '@mui/material/Link';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import AccountInformation from './AccountInformation';
-import CreateApplication from "./CreateApplication";
-import { Application } from "../types";
-import { useState, useContext } from "react";
-import ApplicationsList from "./ApplicationsList";
+import { useContext } from "react";
 import MainListItems from './ListItems';
 import DisplayContent from "./Display";
 import CreateContent from "./Create";
 import { AppContext } from './AppContext';
 import Menu from '@mui/material/Menu'
 import AccountCircle from '@mui/icons-material/AccountCircle';
-import Switch from '@mui/material/Switch';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormGroup from '@mui/material/FormGroup';
 import MenuItem from '@mui/material/MenuItem';
 
 
@@ -99,8 +91,6 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 
 const mdTheme = createTheme();
 
-
-
 function DashboardContent() {
 
   {/* For Drawer*/ }
@@ -127,19 +117,14 @@ function DashboardContent() {
         return <DisplayContent applications={uploadedApplications} />
 
       case 'Create':
-        return <CreateContent applications={uploadedApplications} setApplications={addUploadedApplication} changeView={() => setView("Display")}/>
-    
+        return <CreateContent applications={uploadedApplications} setApplications={addUploadedApplication} changeView={() => setView("Display")} />
+
       case 'Account':
-        return <AccountInformation/>  
-      }
+        return <AccountInformation />
+    }
   }
   {/*for account */ }
-  const [auth, setAuth] = React.useState(true);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setAuth(event.target.checked);
-  };
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);

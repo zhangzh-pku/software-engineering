@@ -8,10 +8,10 @@ const AppRouter: React.FC = () => {
   return (
     <Router>
       <AppProvider>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/:reproductionId" element = {<ReproducePage/>}/>
-      </Routes>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/:reproductionId" element={<ReproducePage />} />
+        </Routes>
       </AppProvider>
     </Router>
   );
