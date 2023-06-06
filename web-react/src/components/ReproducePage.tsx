@@ -24,7 +24,6 @@ import CreateApplication from "./CreateApplication";
 import { Application } from "../types";
 import { useState } from "react";
 import ApplicationsList from "./ApplicationsList";
-import MainListItems from './listItems';
 import DisplayContent from "./Display";
 import CreateContent from "./Create";
 import HorizontalLinearStepper from "./ReproduceStepper"
