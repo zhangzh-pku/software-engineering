@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Paper } from '@mui/material';
+import { Grid } from '@mui/material';
 import { Application } from '../types';
 import { useNavigate } from 'react-router-dom';
 import Card from '@mui/material/Card';
@@ -31,19 +31,6 @@ const ApplicationBlock: React.FC<ApplicationBlockProps> = ({ application }) => {
 
   return (
     <Grid item xs={12} md={4} lg={3}>
-      {/*<Paper
-        sx={{
-          p: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          height: 200,
-        }}
-      >
-        <h3>{application.name}</h3>
-        <h4>{application.id}</h4>
-        <h4>{application.script}</h4>
-        <h4>{application.doi}</h4>
-      </Paper>*/}
       <Card sx={{ maxWidth: 345 }}>
       <CardMedia
         sx={{ height: 140 }}

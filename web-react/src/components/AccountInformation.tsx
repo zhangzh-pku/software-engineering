@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import Typography from '@mui/material/Typography'
 import TextField from "@mui/material/TextField";
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
@@ -11,7 +10,7 @@ export default function AccountInformation() {
 	const [loggedIn, setLoggedIn] = useState(false);
 
 	const handleLogin = () => {
-		{/* Send to group 1 and verify */ }
+		{/* Send to group 1 and verify, if needed*/ }
 		setLoggedIn(true);
 	};
 
