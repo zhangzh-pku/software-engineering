@@ -7,6 +7,8 @@ import ListItemText from "@mui/material/ListItemText";
 import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
 
+//Is this file used?
+
 interface ApplicationDetailsProps {
   application: Application;
   onBack: () => void;

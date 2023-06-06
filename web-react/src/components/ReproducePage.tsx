@@ -1,31 +1,16 @@
-import { useParams } from 'react-router-dom';
 import * as React from 'react';
 import { styled, createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import MuiDrawer from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
-import List from '@mui/material/List';
 import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import Badge from '@mui/material/Badge';
 import Container from '@mui/material/Container';
-import Grid from '@mui/material/Grid';
-import Paper from '@mui/material/Paper';
 import Link from '@mui/material/Link';
-import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import AccountInformation from './AccountInformation';
-import CreateApplication from "./CreateApplication";
-import { Application } from "../types";
-import { useState } from "react";
-import ApplicationsList from "./ApplicationsList";
-import DisplayContent from "./Display";
-import CreateContent from "./Create";
 import HorizontalLinearStepper from "./ReproduceStepper"
 import { useNavigate } from 'react-router-dom';
 
@@ -33,7 +18,7 @@ function Copyright(props: any) {
   return (
     <Typography variant="body2" color="text.secondary" align="center" {...props}>
       {'Copyright © '}
-      <Link color="inherit" href="https://mui.com/">
+      <Link color="inherit" href="https://github.com/zhangzh-pku/software-engineering">
         PKU Software-Engineering Honor Track Group 4
       </Link>{' '}
       {new Date().getFullYear()}
@@ -132,7 +117,6 @@ function ReproducePageContent() {
         >
           <Toolbar />
           <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            {/*contentView()*/}
             <HorizontalLinearStepper />
             <Copyright sx={{ pt: 4 }} />
           </Container>
@@ -143,10 +127,6 @@ function ReproducePageContent() {
 }
 
 const ReproducePage: React.FC = () => {
-  const { articleId } = useParams();
-
-  // 根据 articleId 获取具体的文章内容
-
   return (
     <ReproducePageContent />
   );

@@ -21,30 +21,6 @@ interface FileDisplayProps {
   path: string
 }
 
-const FileInput = () => {
-  const [fileContent, setFileContent] = useState('');
-
-  const handleFileRead = (e: any) => {
-    const content = e.target.result;
-    setFileContent(content);
-  };
-
-  const handleFileChosen = (file: any) => {
-    const fileReader = new FileReader();
-    fileReader.onloadend = handleFileRead;
-    fileReader.readAsText(file[0]);
-  };
-
-  return (
-    <div>
-      <input type="file" onChange={(e) => handleFileChosen(e.target.files)} />
-      <p>{fileContent}</p>
-    </div>
-  );
-};
-
-
-
 {/*This component is used to display log content dynamically 
   Now the path is /public/try.txt
 */ }
@@ -93,7 +69,7 @@ export default function HorizontalLinearStepper() {
 
   const handleNext = () => {
     let newSkipped = skipped;
-    {console.log(process.cwd())}
+    { console.log(process.cwd()) }
     if (isStepSkipped(activeStep)) {
       newSkipped = new Set(newSkipped.values());
       newSkipped.delete(activeStep);
@@ -133,6 +109,7 @@ export default function HorizontalLinearStepper() {
   const [taskstatus, setTaskstatus] = React.useState("waiting"); {/* 0 for waiting, 1 for running, 2 for exited, 3 for dead*/ }
 
   const handleRun = () => {
+    {/* here the logic will be sending signal to backend waiting for a return message*/ }
     setTaskstatus("running");
   };
 
@@ -168,7 +145,7 @@ export default function HorizontalLinearStepper() {
         </Grid>)
 
       case 1: return (<Grid container spacing={3} justifyContent="center">
-        {/* Run the image */}
+        {/* Run the task and display log*/}
         <Grid item xs={12} md={8} lg={9}>
           <Paper
             sx={{
@@ -205,24 +182,23 @@ export default function HorizontalLinearStepper() {
         </Grid>
       </Grid>)
 
-      case 2: return(<Grid container spacing={3} justifyContent="center">
-      {/* Run the image */}
-      <Grid item xs={12} md={8} lg={9}>
-        <Paper
-          sx={{
-            p: 2,
-            display: 'flex',
-            flexDirection: 'column',
-            height: 400,
-            maxHeight: "100%",
-            overflow:"auto"
-          }}
-        >
-          {/*<FileInput />*/}
-          <InteractiveList/>
-        </Paper>
-      </Grid>
-    </Grid>)
+      case 2: return (<Grid container spacing={3} justifyContent="center">
+        {/* Download file */}
+        <Grid item xs={12} md={8} lg={9}>
+          <Paper
+            sx={{
+              p: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              height: 400,
+              maxHeight: "100%",
+              overflow: "auto"
+            }}
+          >
+            <InteractiveList />
+          </Paper>
+        </Grid>
+      </Grid>)
     }
   }
 
@@ -279,7 +255,7 @@ export default function HorizontalLinearStepper() {
             )}
             {/*|| (activeStep === 1 && taskstatus !== "finish")
               Add this to the condition of disabled*/}
-            <Button onClick={handleNext} disabled = {(activeStep === 0 && zippath === '') }>
+            <Button onClick={handleNext} disabled={(activeStep === 0 && zippath === '')}>
               {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
             </Button>
           </Box>
