@@ -1,13 +1,18 @@
 package api
 
 import (
+	"archive/zip"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/zhangzh-pku/software-engineering/pkg/api/entity"
 	"github.com/zhangzh-pku/software-engineering/pkg/file"
 	"github.com/zhangzh-pku/software-engineering/pkg/task"
@@ -20,6 +25,28 @@ func SetupRoutes(router *gin.Engine) {
 	router.GET("/tasks/:taskID/files/:fileName", downloadGeneratedFile)
 	router.POST("/task/create", generateReproduction)
 	router.GET("/reproductions", getAllReproductions)
+	router.POST("/upload", uploadFiles)
+	router.GET("/reproduction/*reproductionID", getReproduction)
+	// 需要改
+	router.GET("/files/:taskId", func(c *gin.Context) {
+		taskId := c.Param("taskId")
+
+		// 替换为实际的父目录
+		parentDir := "/data/zzh/tmp"
+
+		files, err := ioutil.ReadDir(parentDir + taskId)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		fileNames := make([]string, 0, len(files))
+		for _, f := range files {
+			fileNames = append(fileNames, f.Name())
+		}
+
+		c.JSON(http.StatusOK, gin.H{"files": fileNames})
+	})
 }
 
 func runHandler(c *gin.Context) {
@@ -32,29 +59,40 @@ func runHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	taskID := task.GenerateTaskID()
+	fmt.Println("got taskID: " + taskID)
+	tm := task.GetTaskManager()
+	tm.AddTask(taskID)
+	go func() {
+		//认为路径应当是在/data/zzh这个路径下的 并且需要把它copy到/data/zzh/workspace下面去
+		scripts, dockerImage, path, err := task.GetScriptsAndDockerImageAndPath(requestBody.DOID)
+		if err != nil {
+			fmt.Println(err.Error())
+			tm.ChangeTaskStatus(taskID, task.FAILED)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
-	scripts, dockerImage, err := task.GetScriptsAndDockerImage(requestBody.DOID)
+		workPath := filepath.Join("/data/zzh/workspace", path)
 
-	if err != nil {
-		fmt.Println(err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+		err = file.CopyDir(path, workPath)
 
-	err = file.CopyFile(dockerImage, filepath.Join("/data/zzh", dockerImage))
+		if err != nil {
+			fmt.Println("Failed to copy files.")
+			tm.ChangeTaskStatus(taskID, task.FAILED)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
-	if err != nil {
-		fmt.Println("Failed to copy files.")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	taskID, err := task.RunScriptsInDocker(scripts, dockerImage)
-	if err != nil {
-		fmt.Println(err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+		err = task.RunScriptsInDocker(scripts, dockerImage, workPath, taskID)
+		if err != nil {
+			fmt.Println(err.Error())
+			tm.ChangeTaskStatus(taskID, task.FAILED)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		tm.ChangeTaskStatus(taskID, task.SUCCESS)
+	}()
 
 	c.JSON(http.StatusOK, gin.H{
 		"taskID": taskID,
@@ -64,11 +102,15 @@ func runHandler(c *gin.Context) {
 func taskStatusHandler(c *gin.Context) {
 	taskID := c.Param("taskID")
 
-	taskStatus := task.GetTaskStatus(taskID)
-
-	c.JSON(http.StatusOK, gin.H{
-		"status": taskStatus,
-	})
+	tm := task.GetTaskManager()
+	status := tm.GetTaskStatus(taskID)
+	if status == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "task not found",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, status)
 }
 
 func listGeneratedFiles(c *gin.Context) {
@@ -115,20 +157,49 @@ func generateReproduction(c *gin.Context) {
 		DockerImage     string `json:"docker_image"`
 		RunScript       string `json:"run_script"`
 		DissertationDOI string `json:"dissertation_doi"`
-		Path            string `json:"path"`
+		Path            string `json:"data_path"`
 	}
-	if err := c.BindJSON(&requestBody); err != nil {
+	var err error
+	if err = c.BindJSON(&requestBody); err != nil {
 		fmt.Println(err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	manager := entity.GetManagerInstance()
-	err := manager.GenerateReproduction(requestBody.DockerImage, requestBody.RunScript, requestBody.DissertationDOI, requestBody.Path)
-	if err != nil {
-		fmt.Println(err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+	fmt.Println(requestBody.DockerImage)
+	m := entity.GetManagerInstance()
+	taskID := task.GenerateTaskID()
+	fmt.Println(
+		"taskID:" + taskID,
+	)
+	tm := task.GetTaskManager()
+	tm.AddTask(taskID)
+	fmt.Println("task added with id:", taskID)
+	go func() {
+
+		err = task.RunScriptsInDocker(requestBody.RunScript, requestBody.DockerImage, requestBody.Path, taskID)
+
+		if err != nil {
+			// todo change task status
+			fmt.Println(err)
+			tm.ChangeTaskStatus(taskID, task.FAILED)
+			return
+		}
+		// fmt.Println("m.GenerateReproduction(requestBody.DockerImage, requestBody.RunScript, requestBody.DissertationDOI, requestBody.Path)")
+		// fmt.Println(requestBody.DockerImage)
+		// fmt.Println(requestBody.RunScript)
+		// fmt.Println(requestBody.DissertationDOI)
+		// fmt.Println(requestBody.Path)
+		err = m.GenerateReproduction(requestBody.DockerImage, requestBody.RunScript, requestBody.DissertationDOI, requestBody.Path)
+		if err != nil {
+			// todo change task status
+			fmt.Println(err)
+			tm.ChangeTaskStatus(taskID, task.FAILED)
+			return
+		}
+		tm.ChangeTaskStatus(taskID, task.SUCCESS)
+	}()
+	fmt.Println("taskID:" + taskID)
+	c.JSON(http.StatusOK, taskID)
 }
 
 func getAllReproductions(c *gin.Context) {
@@ -140,4 +211,174 @@ func getAllReproductions(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, reproductions)
+}
+
+func uploadFiles(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "没有上传的文件或文件字段名错误。字段名应为 'file'"})
+		return
+	}
+	// 验证文件类型
+	if filepath.Ext(file.Filename) != ".zip" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "仅接受.zip文件类型"})
+		return
+	}
+
+	// 生成一个新的 UUID 作为目录名称
+	dirUUID := uuid.New().String()
+
+	// 创建一个新的文件保存路径
+	savePath := path.Join("/data/zzh/tmp", dirUUID, file.Filename)
+
+	// 创建存储目录
+	if err := os.MkdirAll(filepath.Dir(savePath), os.ModePerm); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建目录失败"})
+		return
+	}
+
+	// 保存上传的文件到指定路径
+	if err := c.SaveUploadedFile(file, savePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存文件失败"})
+		return
+	}
+
+	// 解压文件
+	if err := unzipFile(savePath, filepath.Dir(savePath)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "解压文件失败"})
+		return
+	}
+
+	// 返回成功的消息
+	c.JSON(http.StatusOK, gin.H{"message": path.Join("/data/zzh/tmp", dirUUID)})
+}
+
+func unzipFile(zipFile, destDir string) error {
+	reader, err := zip.OpenReader(zipFile)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	for _, file := range reader.File {
+		path := filepath.Join(destDir, file.Name)
+
+		if file.FileInfo().IsDir() {
+			os.MkdirAll(path, os.ModePerm)
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+			return err
+		}
+
+		destFile, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		defer destFile.Close()
+
+		srcFile, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer srcFile.Close()
+
+		if _, err := io.Copy(destFile, srcFile); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func getReproduction(c *gin.Context) {
+	reproductionID := strings.TrimPrefix(c.Param("reproductionID"), "/")
+	m := entity.GetManagerInstance()
+	links, err := m.GetAllLinks(reproductionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	var scripts string
+	var image string
+	var path string
+	var doi string
+	// todo move marshal
+	fmt.Printf("len links%d", len(links))
+	for i := range links {
+		pin, err := m.GetPin(links[i].To)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		switch pin.Type {
+		case entity.DockerPinType:
+			if _image, ok := pin.Metadata[entity.DockerKey]; !ok {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			} else {
+				if image, ok = _image.(string); !ok {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+			}
+
+		case entity.ScriptPinType:
+			if _scripts, ok := pin.Metadata[entity.ScriptKey]; !ok {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			} else {
+				if scripts, ok = _scripts.(string); !ok {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+			}
+		case entity.DatasetPinType:
+			if _path, ok := pin.Metadata[entity.DataPathKey]; !ok {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			} else {
+				if path, ok = _path.(string); !ok {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+			}
+		case entity.DissertationPinType:
+			if _doi, ok := pin.Metadata[entity.DissertationKey]; !ok {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			} else {
+				if doi, ok = _doi.(string); !ok {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+			}
+		default:
+			fmt.Printf("got type %s", pin.Type)
+		}
+	}
+	// if len(path) == 0 {
+	// 	fmt.Println("path not found")
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "path not found"})
+	// 	return
+	// }
+	// if len(scripts) == 0 {
+	// 	fmt.Println("script not found")
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "script not found"})
+	// }
+	// if len(image) == 0 {
+	// 	fmt.Println("image not found")
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "image not found"})
+	// }
+	// if len(doi) == 0 {
+	// 	fmt.Println("doi not found")
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "doi not found"})
+	// }
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"script": scripts,
+		"doi":    doi,
+		"image":  image,
+		"path":   path,
+	})
 }

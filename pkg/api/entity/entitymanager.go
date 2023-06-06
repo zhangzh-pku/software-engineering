@@ -16,11 +16,12 @@ const (
 	DockerPinType        = "docker_image"
 	ScriptPinType        = "run_script"
 	DissertationPinType  = "dissertation_doi"
+	DatasetPinType       = "dataset"
 	ReproductionPinType  = "reproduction"
 	DockerKey            = "image"
 	ScriptKey            = "script"
 	DissertationKey      = "disseration"
-	Path                 = "path"
+	DataPathKey          = "data_path"
 	ReproductionLinkType = "reproduction_link"
 	OtherLinkType        = "ref_link"
 )
@@ -29,6 +30,7 @@ const (
 type DoManager struct {
 	Pins  map[string]*Pin
 	Links map[string]*Link
+	mu    sync.Mutex
 }
 
 type LinkResp struct {
@@ -64,6 +66,8 @@ func (m *DoManager) AddPin(pin *Pin) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.Pins[pinID] = pin
 	return pinID, nil
 }
@@ -74,6 +78,8 @@ func (m *DoManager) AddLink(link *Link) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.Links[linkID] = link
 	return linkID, nil
 }
@@ -162,7 +168,7 @@ func (m *DoManager) GetPin(id string) (*Pin, error) {
 	}
 }
 
-func (m *DoManager) GetAllLinks(pinId string) ([]*Link, error) {
+func (m *DoManager) getAllFromLinks(pinId string) ([]*Link, error) {
 	baseUrl := "http://8.130.74.159:21080/api/link/list"
 	params := url.Values{}
 	params.Add("from", pinId)
@@ -208,34 +214,99 @@ func (m *DoManager) GetAllLinks(pinId string) ([]*Link, error) {
 	return links, nil
 }
 
+func (m *DoManager) getAllToLinks(pinId string) ([]*Link, error) {
+	baseUrl := "http://8.130.74.159:21080/api/link/list"
+	params := url.Values{}
+	params.Add("to", pinId)
+
+	// Create a new HTTP client and request
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s?%s", baseUrl, params.Encode()), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add headers to the request
+	token, err := account.GetToken()
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Content-Type", "application/json")
+
+	// Send the request and read the response body
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the response body into a slice of links
+	var _links []*LinkResp
+	err = json.Unmarshal(body, &_links)
+	if err != nil {
+		return nil, err
+	}
+	// fuck golang!!!!!
+	var links []*Link
+	for i := range _links {
+		links = append(links, &_links[i].Link)
+	}
+	return links, nil
+}
+
+func (m *DoManager) GetAllLinks(pinId string) ([]*Link, error) {
+	links1, err := m.getAllFromLinks(pinId)
+	if err != nil {
+		return nil, err
+	}
+	links2, err := m.getAllToLinks(pinId)
+	if err != nil {
+		return nil, err
+	}
+	return append(links1, links2...), nil
+}
+
 func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, dissertationDOI string, path string) error {
-	var DockerImagePin, RunScriptPin, DissertationDOIPin Pin
+	var DockerImagePin, RunScriptPin, DissertationDOIPin, DatasetPin Pin
 	DockerImagePin.Type = DockerPinType
 	RunScriptPin.Type = ScriptPinType
 	DissertationDOIPin.Type = DissertationPinType
+	DatasetPin.Type = DatasetPinType
 	DissertationDOIPin.Metadata = make(map[string]interface{})
 	RunScriptPin.Metadata = make(map[string]interface{})
 	DockerImagePin.Metadata = make(map[string]interface{})
+	DatasetPin.Metadata = make(map[string]interface{})
+	DatasetPin.Metadata[DataPathKey] = path
 	DockerImagePin.Metadata[DockerKey] = dockerImage
-	DockerImagePin.Metadata[Path] = path
 	RunScriptPin.Metadata[ScriptKey] = runScript
 	DissertationDOIPin.Metadata[DissertationKey] = dissertationDOI
-	dockerPinID, err := DockerImagePin.Create()
+	// 五个pin 对应论文 复现 数据 docker镜像 脚本
+	dockerPinID, err := m.AddPin(&DockerImagePin)
 	if err != nil {
 		return err
 	}
-	runScriptID, err := RunScriptPin.Create()
+	runScriptID, err := m.AddPin(&RunScriptPin)
 	if err != nil {
 		return err
 	}
-	dissertationDOIID, err := DissertationDOIPin.Create()
+	dissertationDOIID, err := m.AddPin(&DissertationDOIPin)
+	if err != nil {
+		return err
+	}
+	datasetID, err := m.AddPin(&DatasetPin)
 	if err != nil {
 		return err
 	}
 	var reproductionPin Pin
 	reproductionPin.Metadata = make(map[string]interface{})
 	reproductionPin.Type = ReproductionPinType
-	reproductionID, err := reproductionPin.Create()
+	reproductionID, err := m.AddPin(&reproductionPin)
 	if err != nil {
 		return err
 	}
@@ -244,6 +315,14 @@ func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, d
 		To:   reproductionID,
 		Type: ReproductionLinkType,
 	}
+
+	link := &Link{
+		From: reproductionID,
+		To:   dissertationDOIID,
+		Type: OtherLinkType,
+	}
+	link.Metadata = make(map[string]interface{})
+
 	link1.Metadata = make(map[string]interface{})
 	link2 := &Link{
 		From: reproductionID,
@@ -257,6 +336,16 @@ func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, d
 		Type: OtherLinkType,
 	}
 	link3.Metadata = make(map[string]interface{})
+	link4 := &Link{
+		From: reproductionID,
+		To:   datasetID,
+		Type: OtherLinkType,
+	}
+	link4.Metadata = make(map[string]interface{})
+	_, err = m.AddLink(link)
+	if err != nil {
+		return err
+	}
 	_, err = m.AddLink(link1)
 	if err != nil {
 		return err
@@ -266,6 +355,10 @@ func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, d
 		return err
 	}
 	_, err = m.AddLink(link3)
+	if err != nil {
+		return err
+	}
+	_, err = m.AddLink(link4)
 	if err != nil {
 		return err
 	}
@@ -308,4 +401,35 @@ func (m *DoManager) GetAllReproductions() ([]string, error) {
 		}
 	}
 	return pins, nil
+}
+
+func (m *DoManager) DeleteAllReproductions() error {
+	l, _ := m.GetAllReproductions()
+	for i := range l {
+		id := l[i]
+		url := "http://8.130.74.159:21080/api/pin/" + strings.ReplaceAll(id, "/", "%2F")
+		method := "DELETE"
+		client := &http.Client{}
+		req, err := http.NewRequest(method, url, nil)
+		if err != nil {
+			return err
+		}
+		token, err := account.GetToken()
+		if err != nil {
+			return err
+		}
+		req.Header.Add("Authorization", "Bearer "+token)
+		res, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		fmt.Println("delete body:" + string(body))
+	}
+	return nil
 }

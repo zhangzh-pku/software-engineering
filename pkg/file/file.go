@@ -36,6 +36,35 @@ func CopyFile(src, dst string) error {
 	return nil
 }
 
+func CopyDir(src, dst string) error {
+	err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to access path %q: %v\n", path, err)
+		}
+
+		dstPath := filepath.Join(dst, path[len(src):])
+		if info.IsDir() {
+			err := os.MkdirAll(dstPath, info.Mode())
+			if err != nil {
+				return fmt.Errorf("failed to create directory: %v", err)
+			}
+		} else {
+			err := CopyFile(path, dstPath)
+			if err != nil {
+				return fmt.Errorf("failed to copy file: %v", err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("error walking the path %v: %v", src, err)
+	}
+
+	return nil
+}
+
 func CopyFiles(sourceDir, destinationDir string) error {
 	fileInfos, err := ioutil.ReadDir(sourceDir)
 	if err != nil {
