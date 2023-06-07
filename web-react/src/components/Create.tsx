@@ -36,7 +36,7 @@ export default function CreateContent(param: createProps) {
             p: 2,
             display: "flex",
             flexDirection: "column",
-            height: 480,
+            height: 560,
           }}
         >
           <CreateApplication onSubmit={handleSubmitApplication} />

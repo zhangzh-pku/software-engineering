@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import axios from "axios";
+import { Grid } from "@mui/material";
 
 interface CreateApplicationProps {
   onSubmit: (
@@ -99,19 +100,23 @@ const CreateApplication: React.FC<CreateApplicationProps> = ({ onSubmit }) => {
         fullWidth
         margin="normal"
       />
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleSubmit}
-        disabled={
-          dockerimage === "" ||
-          doi === "" ||
-          reproduction === "" ||
-          script === ""
-        }
-      >
-        Submit
-      </Button>
+      <Grid container justifyContent="center" sx={{ mt: 2 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleSubmit}
+          disabled={
+            dockerimage === "" ||
+            doi === "" ||
+            reproduction === "" ||
+            script === "" ||
+            file === null
+          }
+
+        >
+          Submit
+        </Button>
+      </Grid>
     </div>
   );
 };

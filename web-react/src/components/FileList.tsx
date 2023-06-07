@@ -5,10 +5,11 @@ import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import FileDownloadEntry from './FileDownloadEntry';
 
+// Is this file used?
 function generate(thelist: string[]) {
     console.log("wocaonima")
     console.log(process.cwd())
-    return thelist.map((value) => <FileDownloadEntry name={value} />);
+    return thelist.map((value) => <FileDownloadEntry name={value} taskid = "0"/>);
 }
 
 const mypath = ".."
