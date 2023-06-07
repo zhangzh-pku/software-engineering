@@ -12,6 +12,8 @@ import { useState, ChangeEvent, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
 import { Application } from "../types";
+import Circular from "./CircularProgress";
+import FileDownloadEntry from "./FileDownloadEntry";
 const steps = ["Upload your dataset", "Run", "Download the output"];
 
 export default function HorizontalLinearStepper() {
@@ -21,7 +23,7 @@ export default function HorizontalLinearStepper() {
   const application = location.state?.application;
   // 创建状态来存储任务ID和任务状态
   const [taskId, setTaskId] = useState<string | null>(null);
-  const [taskStatus, setTaskStatus] = useState<string | null>(null);
+  const [taskStatus, setTaskStatus] = useState<string | null>("pending");
   const [fileList, setFileList] = useState<string[]>([]);
 
   const isStepSkipped = (step: number) => {
@@ -76,7 +78,7 @@ export default function HorizontalLinearStepper() {
       // 清除定时器
       return () => clearInterval(interval);
     }
-    if (taskStatus === "success" ) {
+    if (taskStatus === "success") {
       axios
         .get(`http://localhost:8080/files/${taskId}`)
         .then((response) => {
@@ -129,6 +131,7 @@ export default function HorizontalLinearStepper() {
               >
                 <div>
                   <h3>Task Status: {taskStatus}</h3>
+                  <Circular taskstatus={taskStatus}/>
                 </div>
               </Paper>
             </Grid>
@@ -152,8 +155,9 @@ export default function HorizontalLinearStepper() {
                 <div>
                   <h3>File List:</h3>
                   <ul>
-                    {fileList.map((fileName, index) => (
-                      <li key={index}>{fileName}</li>
+                    {/*Modify here to map to the component FileDownloadEntry*/}
+                    {taskId !== null && fileList.map((fileName) => (
+                      <FileDownloadEntry name = {fileName} taskid={taskId} />
                     ))}
                   </ul>
                 </div>
@@ -206,7 +210,7 @@ export default function HorizontalLinearStepper() {
               Back
             </Button>
             <Box sx={{ flex: "1 1 auto" }} />
-            <Button onClick={handleNext}>
+            <Button onClick={handleNext} disabled={activeStep === 1 && taskStatus !== "success"}>
               {activeStep === steps.length - 1 ? "Finish" : "Next"}
             </Button>
           </Box>

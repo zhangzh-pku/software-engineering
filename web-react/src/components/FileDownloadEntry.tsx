@@ -9,11 +9,12 @@ import DownloadIcon from '@mui/icons-material/Download';
 
 interface FileDownloadEntryProps {
     name: string
+    taskid : string
 }
 
 
-const handleClick = async (name: string) => {
-    const response = await fetch('http://localhost:8080/' + name);
+const handleClick = async (name: string, taskid : string) => {
+    const response = await fetch('http://localhost:8080/file/' + taskid + name);
     const blob = await response.blob();
     const url = window.URL.createObjectURL(new Blob([blob]));
     const link = document.createElement('a');
@@ -31,7 +32,7 @@ export default function FileDownloadEntry(params: FileDownloadEntryProps) {
         <ListItem
             secondaryAction={
                 <IconButton edge="end" aria-label="delete">
-                    <DownloadIcon onClick={() => handleClick(params.name)} />
+                    <DownloadIcon onClick={() => handleClick(params.name, params.taskid)} />
                 </IconButton>
             }
         >
