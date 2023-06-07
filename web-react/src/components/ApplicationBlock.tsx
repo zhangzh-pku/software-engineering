@@ -22,7 +22,7 @@ const ApplicationBlock: React.FC<ApplicationBlockProps> = ({ application }) => {
 
   const handleClickOnBlock = () => {
     console.log("I am clicked");
-    navigate(`./${application.doi}`);
+    navigate(`./${application.doi}`, { state: { application } });
   };
 
   const imagename : string = hash(application.id,7).toString()

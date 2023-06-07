@@ -3,6 +3,7 @@ export interface Application {
   name: string;
   script: string;
   doi: string;
+  path: string;
 }
 
 export interface Output {

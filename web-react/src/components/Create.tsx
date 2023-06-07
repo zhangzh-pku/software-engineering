@@ -1,26 +1,30 @@
-import * as React from 'react';
-import Grid from '@mui/material/Grid';
-import Paper from '@mui/material/Paper';
+import * as React from "react";
+import Grid from "@mui/material/Grid";
+import Paper from "@mui/material/Paper";
 import CreateApplication from "./CreateApplication";
 import { Application } from "../types";
 
 interface createProps {
-  applications: Application[]
-  setApplications: any
-  changeView: any
+  applications: Application[];
+  setApplications: any;
+  changeView: any;
 }
 
 export default function CreateContent(param: createProps) {
-
-  const handleSubmitApplication = (script: string, doi: string) => {
+  const handleSubmitApplication = (
+    script: string,
+    doi: string,
+    path: string
+  ) => {
     const newApplication: Application = {
       id: param.applications.length + 1,
       name: `Reproduction ${param.applications.length + 1}`,
       script,
       doi,
+      path,
     };
     param.setApplications(newApplication);
-    param.changeView("Display")
+    param.changeView("Display");
   };
 
   return (
@@ -30,8 +34,8 @@ export default function CreateContent(param: createProps) {
         <Paper
           sx={{
             p: 2,
-            display: 'flex',
-            flexDirection: 'column',
+            display: "flex",
+            flexDirection: "column",
             height: 480,
           }}
         >
@@ -39,5 +43,5 @@ export default function CreateContent(param: createProps) {
         </Paper>
       </Grid>
     </Grid>
-  )
+  );
 }
