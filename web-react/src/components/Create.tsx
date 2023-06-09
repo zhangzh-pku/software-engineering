@@ -14,14 +14,18 @@ export default function CreateContent(param: createProps) {
   const handleSubmitApplication = (
     script: string,
     doi: string,
-    path: string
+    reproduction: string,
+    path: string,
+    id: string,
+    charged: boolean,
   ) => {
     const newApplication: Application = {
-      id: param.applications.length + 1,
       name: `Reproduction ${param.applications.length + 1}`,
       script,
       doi,
       path,
+      id,
+      charged,
     };
     param.setApplications(newApplication);
     param.changeView("Display");

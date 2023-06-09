@@ -22,6 +22,7 @@ const (
 	ScriptKey            = "script"
 	DissertationKey      = "disseration"
 	DataPathKey          = "data_path"
+	ChargedKey           = "is_charged"
 	ReproductionLinkType = "reproduction_link"
 	OtherLinkType        = "ref_link"
 )
@@ -272,7 +273,7 @@ func (m *DoManager) GetAllLinks(pinId string) ([]*Link, error) {
 	return append(links1, links2...), nil
 }
 
-func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, dissertationDOI string, path string) error {
+func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, dissertationDOI string, path string, charged bool) error {
 	var DockerImagePin, RunScriptPin, DissertationDOIPin, DatasetPin Pin
 	DockerImagePin.Type = DockerPinType
 	RunScriptPin.Type = ScriptPinType
@@ -305,6 +306,7 @@ func (m *DoManager) GenerateReproduction(dockerImage string, runScript string, d
 	}
 	var reproductionPin Pin
 	reproductionPin.Metadata = make(map[string]interface{})
+	reproductionPin.Metadata[ChargedKey] = charged
 	reproductionPin.Type = ReproductionPinType
 	reproductionID, err := m.AddPin(&reproductionPin)
 	if err != nil {

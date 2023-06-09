@@ -1,9 +1,10 @@
 export interface Application {
-  id: number;
+  id: string;
   name: string;
   script: string;
   doi: string;
   path: string;
+  charged: boolean;
 }
 
 export interface Output {

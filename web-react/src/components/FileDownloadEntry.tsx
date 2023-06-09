@@ -14,15 +14,28 @@ interface FileDownloadEntryProps {
 
 
 const handleClick = async (name: string, taskid : string) => {
-    const response = await fetch('http://localhost:8080/file/' + taskid + name);
+    const response = await fetch('http://localhost:8080/file/' + taskid + '/' + name);
     const blob = await response.blob();
+
+    // 注意这里要判断 HTTP 状态码，如果不是 200，说明可能出现错误。
+    if (!response.ok) {
+        console.error("Error downloading file:", response.status, response.statusText);
+        return;
+    }
+
     const url = window.URL.createObjectURL(new Blob([blob]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'file.pdf');
+
+    // 这里使用实际的文件名作为下载文件的名字。
+    link.setAttribute('download', name);
     document.body.appendChild(link);
     link.click();
+
+    // 记得在完成后删除这个元素。
+    document.body.removeChild(link);
 };
+
 
 
 

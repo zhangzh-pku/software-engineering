@@ -36,6 +36,7 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       <Typography variant="h4" component="h2">
         {application.name}
       </Typography>
+      <Typography variant="body1">Name: {application.name}</Typography>
       <Typography variant="body1">Script: {application.script}</Typography>
       <Typography variant="body1">DOI: {application.doi}</Typography>
       <Typography variant="h6" component="h3" sx={{ mt: 2 }}>

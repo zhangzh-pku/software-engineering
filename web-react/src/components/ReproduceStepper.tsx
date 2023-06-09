@@ -25,9 +25,15 @@ export default function HorizontalLinearStepper() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [taskStatus, setTaskStatus] = useState<string | null>("pending");
   const [fileList, setFileList] = useState<string[]>([]);
+  const [file, setFile] = useState<File | null>(null);
 
   const isStepSkipped = (step: number) => {
     return skipped.has(step);
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files ? event.target.files[0] : null;
+    setFile(file);
   };
 
   const handleNext = () => {
@@ -64,7 +70,7 @@ export default function HorizontalLinearStepper() {
     // 检查任务ID是否已经存在，如果不存在，则不需要检查任务状态
     if (taskId) {
       // 发送请求来获取任务状态
-      const interval = setInterval(() => {
+      const statusInterval = setInterval(() => {
         axios
           .get(`http://localhost:8080/task_status/${taskId}`)
           .then((response) => {
@@ -75,45 +81,86 @@ export default function HorizontalLinearStepper() {
           });
       }, 5000); // 每5秒钟获取一次状态
 
+      // 在taskStatus为success时，定时获取文件列表
+      let fileListInterval: NodeJS.Timeout | null = null;
+      if (taskStatus === "success") {
+        fileListInterval = setInterval(() => {
+          axios
+            .get(`http://localhost:8080/files/${taskId}`)
+            .then((response) => {
+              setFileList(response.data.files);
+            })
+            .catch((error) => {
+              console.error("Error fetching file list:", error);
+            });
+        }, 5000); // 每5秒钟获取一次文件列表
+      }
+
       // 清除定时器
-      return () => clearInterval(interval);
-    }
-    if (taskStatus === "success") {
-      axios
-        .get(`http://localhost:8080/files/${taskId}`)
-        .then((response) => {
-          setFileList(response.data.files);
-        })
-        .catch((error) => {
-          console.error("Error fetching file list:", error);
-        });
+      return () => {
+        clearInterval(statusInterval);
+        if (fileListInterval) {
+          clearInterval(fileListInterval);
+        }
+      };
     }
   }, [taskId, taskStatus]);
 
   const contentView = () => {
     switch (activeStep) {
       case 0:
-        return (
-          <Grid container spacing={3} justifyContent="center">
-            <Grid item xs={12} md={8} lg={9}>
-              <Paper
-                sx={{
-                  p: 2,
-                  display: "flex",
-                  flexDirection: "column",
-                  height: 400,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                }}
-              >
-                <div>
-                  <h3>Free dataset is saved in our system!</h3>
-                </div>
-              </Paper>
+        if (application.charged) {
+          console.log("application.charged", application.charged);
+          return (
+            <Grid container spacing={3} justifyContent="center">
+              <Grid item xs={12} md={8} lg={9}>
+                <Paper
+                  sx={{
+                    p: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                    height: 400,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textAlign: "center",
+                  }}
+                >
+                  <div>
+                    <h3>Please Upload Your Dataset</h3>
+                  </div>
+                  <TextField
+                    type="file"
+                    onChange={handleFileChange}
+                    fullWidth
+                    margin="normal"
+                  />
+                </Paper>
+              </Grid>
             </Grid>
-          </Grid>
-        );
+          );
+        } else {
+          return (
+            <Grid container spacing={3} justifyContent="center">
+              <Grid item xs={12} md={8} lg={9}>
+                <Paper
+                  sx={{
+                    p: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                    height: 400,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textAlign: "center",
+                  }}
+                >
+                  <div>
+                    <h3>Free dataset is saved in our system!</h3>
+                  </div>
+                </Paper>
+              </Grid>
+            </Grid>
+          );
+        }
       case 1:
         return (
           <Grid container spacing={3} justifyContent="center">
@@ -129,9 +176,11 @@ export default function HorizontalLinearStepper() {
                   textAlign: "center",
                 }}
               >
-                <div>
+                <div >
                   <h3>Task Status: {taskStatus}</h3>
-                  <Circular taskstatus={taskStatus}/>
+                  <div style={{ margin: "auto" }}>
+                  <Circular taskstatus={taskStatus} />
+                  </div>
                 </div>
               </Paper>
             </Grid>
@@ -153,12 +202,12 @@ export default function HorizontalLinearStepper() {
                 }}
               >
                 <div>
-                  <h3>File List:</h3>
                   <ul>
-                    {/*Modify here to map to the component FileDownloadEntry*/}
-                    {taskId !== null && fileList.map((fileName) => (
-                      <FileDownloadEntry name = {fileName} taskid={taskId} />
-                    ))}
+                    {fileList.map((fileName) =>
+                      taskId ? (
+                        <FileDownloadEntry name={fileName} taskid={taskId} />
+                      ) : null
+                    )}
                   </ul>
                 </div>
               </Paper>
@@ -210,7 +259,10 @@ export default function HorizontalLinearStepper() {
               Back
             </Button>
             <Box sx={{ flex: "1 1 auto" }} />
-            <Button onClick={handleNext} disabled={activeStep === 1 && taskStatus !== "success"}>
+            <Button
+              onClick={handleNext}
+              disabled={activeStep === 1 && taskStatus !== "success"}
+            >
               {activeStep === steps.length - 1 ? "Finish" : "Next"}
             </Button>
           </Box>

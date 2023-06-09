@@ -1,9 +1,7 @@
 package api
 
 import (
-	"archive/zip"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -27,26 +25,34 @@ func SetupRoutes(router *gin.Engine) {
 	router.GET("/reproductions", getAllReproductions)
 	router.POST("/upload", uploadFiles)
 	router.GET("/reproduction/*reproductionID", getReproduction)
-	// 需要改
-	router.GET("/files/:taskId", func(c *gin.Context) {
-		taskId := c.Param("taskId")
+	router.GET("/files/:taskId", getTaskFilesHandler)
+	router.GET("/file/:taskId/:filename", getSingleFileHandler)
+}
 
-		// 替换为实际的父目录
-		parentDir := "/data/zzh/tmp"
+func getSingleFileHandler(c *gin.Context) {
+	taskId := c.Param("taskId")
+	filename := c.Param("filename")
+	parentDir := "/data/zzh/workspace/"
+	c.File(parentDir + taskId + "/" + filename)
+}
 
-		files, err := ioutil.ReadDir(parentDir + taskId)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+func getTaskFilesHandler(c *gin.Context) {
+	taskId := c.Param("taskId")
 
-		fileNames := make([]string, 0, len(files))
-		for _, f := range files {
-			fileNames = append(fileNames, f.Name())
-		}
+	// 替换为实际的父目录
+	parentDir := "/data/zzh/workspace/"
 
-		c.JSON(http.StatusOK, gin.H{"files": fileNames})
-	})
+	files, err := ioutil.ReadDir(parentDir + taskId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	fileNames := make([]string, 0, len(files))
+	for _, f := range files {
+		fileNames = append(fileNames, f.Name())
+	}
+	c.JSON(http.StatusOK, gin.H{"files": fileNames})
 }
 
 func runHandler(c *gin.Context) {
@@ -72,9 +78,8 @@ func runHandler(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-
-		workPath := filepath.Join("/data/zzh/workspace", path)
-
+		workPath := filepath.Join("/data/zzh/workspace", taskID)
+		fmt.Println("workPath: " + workPath)
 		err = file.CopyDir(path, workPath)
 
 		if err != nil {
@@ -158,6 +163,7 @@ func generateReproduction(c *gin.Context) {
 		RunScript       string `json:"run_script"`
 		DissertationDOI string `json:"dissertation_doi"`
 		Path            string `json:"data_path"`
+		Charged         bool   `json:"data_charged"`
 	}
 	var err error
 	if err = c.BindJSON(&requestBody); err != nil {
@@ -179,7 +185,6 @@ func generateReproduction(c *gin.Context) {
 		err = task.RunScriptsInDocker(requestBody.RunScript, requestBody.DockerImage, requestBody.Path, taskID)
 
 		if err != nil {
-			// todo change task status
 			fmt.Println(err)
 			tm.ChangeTaskStatus(taskID, task.FAILED)
 			return
@@ -189,9 +194,16 @@ func generateReproduction(c *gin.Context) {
 		// fmt.Println(requestBody.RunScript)
 		// fmt.Println(requestBody.DissertationDOI)
 		// fmt.Println(requestBody.Path)
-		err = m.GenerateReproduction(requestBody.DockerImage, requestBody.RunScript, requestBody.DissertationDOI, requestBody.Path)
+		reproductionPath := "/data/zzh/" + requestBody.DissertationDOI
+		err = file.CopyDir(requestBody.Path, reproductionPath)
 		if err != nil {
-			// todo change task status
+			fmt.Println(err)
+			tm.ChangeTaskStatus(taskID, task.FAILED)
+			return
+		}
+		// 跑完之后给复制到一个指定文件夹
+		err = m.GenerateReproduction(requestBody.DockerImage, requestBody.RunScript, requestBody.DissertationDOI, reproductionPath, requestBody.Charged)
+		if err != nil {
 			fmt.Println(err)
 			tm.ChangeTaskStatus(taskID, task.FAILED)
 			return
@@ -214,13 +226,13 @@ func getAllReproductions(c *gin.Context) {
 }
 
 func uploadFiles(c *gin.Context) {
-	file, err := c.FormFile("file")
+	_file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "没有上传的文件或文件字段名错误。字段名应为 'file'"})
 		return
 	}
 	// 验证文件类型
-	if filepath.Ext(file.Filename) != ".zip" {
+	if filepath.Ext(_file.Filename) != ".zip" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "仅接受.zip文件类型"})
 		return
 	}
@@ -229,7 +241,7 @@ func uploadFiles(c *gin.Context) {
 	dirUUID := uuid.New().String()
 
 	// 创建一个新的文件保存路径
-	savePath := path.Join("/data/zzh/tmp", dirUUID, file.Filename)
+	savePath := path.Join("/data/zzh/tmp", dirUUID, _file.Filename)
 
 	// 创建存储目录
 	if err := os.MkdirAll(filepath.Dir(savePath), os.ModePerm); err != nil {
@@ -238,58 +250,19 @@ func uploadFiles(c *gin.Context) {
 	}
 
 	// 保存上传的文件到指定路径
-	if err := c.SaveUploadedFile(file, savePath); err != nil {
+	if err := c.SaveUploadedFile(_file, savePath); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存文件失败"})
 		return
 	}
 
 	// 解压文件
-	if err := unzipFile(savePath, filepath.Dir(savePath)); err != nil {
+	if err := file.UnzipFile(savePath, filepath.Dir(savePath)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "解压文件失败"})
 		return
 	}
 
 	// 返回成功的消息
 	c.JSON(http.StatusOK, gin.H{"message": path.Join("/data/zzh/tmp", dirUUID)})
-}
-
-func unzipFile(zipFile, destDir string) error {
-	reader, err := zip.OpenReader(zipFile)
-	if err != nil {
-		return err
-	}
-	defer reader.Close()
-
-	for _, file := range reader.File {
-		path := filepath.Join(destDir, file.Name)
-
-		if file.FileInfo().IsDir() {
-			os.MkdirAll(path, os.ModePerm)
-			continue
-		}
-
-		if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
-			return err
-		}
-
-		destFile, err := os.Create(path)
-		if err != nil {
-			return err
-		}
-		defer destFile.Close()
-
-		srcFile, err := file.Open()
-		if err != nil {
-			return err
-		}
-		defer srcFile.Close()
-
-		if _, err := io.Copy(destFile, srcFile); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func getReproduction(c *gin.Context) {
@@ -375,10 +348,24 @@ func getReproduction(c *gin.Context) {
 	// 	fmt.Println("doi not found")
 	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "doi not found"})
 	// }
+	pin, err := m.GetPin(reproductionID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	charged := false
+
+	if _charged, ok := pin.Metadata[entity.ChargedKey]; ok {
+		if __charged, ok := _charged.(bool); ok {
+			charged = __charged
+		}
+	}
+
 	c.JSON(http.StatusOK, map[string]interface{}{
-		"script": scripts,
-		"doi":    doi,
-		"image":  image,
-		"path":   path,
+		"script":  scripts,
+		"doi":     doi,
+		"image":   image,
+		"path":    path,
+		"charged": charged,
 	})
 }

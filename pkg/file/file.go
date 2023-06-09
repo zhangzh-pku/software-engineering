@@ -1,6 +1,7 @@
 package file
 
 import (
+	"archive/zip"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -78,6 +79,45 @@ func CopyFiles(sourceDir, destinationDir string) error {
 		err := CopyFile(sourcePath, destinationPath)
 		if err != nil {
 			return fmt.Errorf("failed to copy file %s: %v", sourcePath, err)
+		}
+	}
+
+	return nil
+}
+
+func UnzipFile(zipFile, destDir string) error {
+	reader, err := zip.OpenReader(zipFile)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	for _, file := range reader.File {
+		path := filepath.Join(destDir, file.Name)
+
+		if file.FileInfo().IsDir() {
+			os.MkdirAll(path, os.ModePerm)
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+			return err
+		}
+
+		destFile, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		defer destFile.Close()
+
+		srcFile, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer srcFile.Close()
+
+		if _, err := io.Copy(destFile, srcFile); err != nil {
+			return err
 		}
 	}
 
